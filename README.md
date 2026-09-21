@@ -1,42 +1,73 @@
 # Job Application Tracker
 
-A Spring Boot REST API for managing and tracking job applications with CRUD operations, filtering, pagination, validation, and global exception handling.
+A Spring Boot REST API for managing and tracking job applications with CRUD operations, filtering, pagination, validation, global exception handling, and JWT-based authentication and authorization.
 
 ## 🎯 Project Overview
 
 The Job Application Tracker is a backend application built to manage job application records through a RESTful API.
 
-The project was developed with a focus on learning and applying real-world backend development concepts such as layered architecture, DTOs, validation, database persistence, API design, exception handling, filtering, and pagination.
+The project was developed as a practical backend learning project, focusing on real-world development concepts such as layered architecture, DTOs, validation, database persistence, API design, exception handling, filtering, pagination, authentication, authorization, and JWT-based security.
+
+The application provides secure authentication using Spring Security and JWT while keeping the job application management APIs protected.
 
 ## 🛠️ Tech Stack
 
-- **Language:** Java
-- **Framework:** Spring Boot
-- **Persistence:** Spring Data JPA
-- **Database:** MySQL
-- **Build Tool:** Maven
-- **API Documentation:** Swagger UI / OpenAPI
-- **API Style:** REST
-- **Version Control:** Git & GitHub
+* **Language:** Java 21
+* **Framework:** Spring Boot
+* **Security:** Spring Security
+* **Authentication:** JWT
+* **Password Hashing:** BCrypt
+* **Persistence:** Spring Data JPA
+* **Database:** MySQL
+* **Build Tool:** Maven
+* **API Documentation:** Swagger UI / OpenAPI
+* **API Style:** REST
+* **Version Control:** Git & GitHub
 
 ## ✨ Features
 
-- Create new job applications
-- Retrieve all job applications
-- Retrieve a job application by ID
-- Update existing job applications
-- Delete job applications
-- Search and filter applications
-- Filter by company
-- Filter by application status
-- Filter by location
-- Combine company and status filters
-- Pagination support
-- Request validation using DTOs
-- Global exception handling
-- Meaningful validation error responses
-- Proper HTTP status codes and RESTful responses
-- Interactive API documentation with Swagger UI
+### Job Application Management
+
+* Create new job applications
+* Retrieve all job applications
+* Retrieve a job application by ID
+* Update existing job applications
+* Delete job applications
+* Search and filter applications
+* Filter by company
+* Filter by application status
+* Filter by location
+* Combine multiple filters
+* Pagination support
+
+### Validation & Error Handling
+
+* Request validation using DTOs
+* Global exception handling
+* Meaningful validation error responses
+* Proper HTTP status codes
+* Consistent RESTful error responses
+
+### Authentication & Security
+
+* User registration
+* Secure password hashing using BCrypt
+* User login with Spring Security
+* JWT token generation
+* JWT token expiration
+* JWT token validation
+* JWT-based stateless authentication
+* Role information stored inside JWT
+* Role-based authorization support
+* Protected application endpoints
+* Invalid and expired JWT requests return `401 Unauthorized`
+* JWT secret configured through environment variables
+
+### API Documentation
+
+* Interactive Swagger UI
+* OpenAPI specification
+* API testing through Swagger UI
 
 ## 🏗️ Application Structure
 
@@ -52,34 +83,170 @@ Repository
 Database
 ```
 
+### Security Architecture
+
+Authentication and authorization are implemented using Spring Security and JWT:
+
+```text
+Client
+   ↓
+AuthController
+   ↓
+AuthenticationManager
+   ↓
+DaoAuthenticationProvider
+   ↓
+CustomUserDetailsService
+   ↓
+UserRepository
+   ↓
+MySQL
+   ↓
+BCrypt Password Verification
+   ↓
+JWT Generation
+   ↓
+Client
+```
+
+For protected requests:
+
+```text
+Client
+   ↓
+Authorization: Bearer <JWT>
+   ↓
+JwtFilter
+   ↓
+JWT Validation
+   ↓
+Extract Username + Role
+   ↓
+SecurityContext
+   ↓
+Spring Security Authorization
+   ↓
+Protected Controller
+   ↓
+Service
+   ↓
+Repository
+   ↓
+MySQL
+```
+
 ### Main Components
 
-- **Controller Layer** — Handles HTTP requests and API endpoints.
-- **Service Layer** — Contains application and business logic.
-- **Repository Layer** — Handles database operations using Spring Data JPA.
-- **DTOs** — Separate API request/response models from the database entity.
-- **Exception Handling** — Provides consistent error responses across the API.
-- **Validation** — Validates incoming request data before processing.
+* **Controller Layer** — Handles HTTP requests and API endpoints.
+* **Service Layer** — Contains application and business logic.
+* **Repository Layer** — Handles database operations using Spring Data JPA.
+* **DTOs** — Separate API request/response models from database entities.
+* **Security Configuration** — Defines authentication and authorization rules.
+* **JwtService** — Generates and extracts information from JWT tokens.
+* **JwtFilter** — Intercepts requests and validates JWT authentication.
+* **CustomUserDetailsService** — Loads user information from the database for Spring Security.
+* **PasswordEncoder** — Uses BCrypt to securely hash and verify passwords.
+* **Exception Handling** — Provides consistent error responses across the API.
+* **Validation** — Validates incoming request data before processing.
+
+## 🔐 Authentication Flow
+
+### User Registration
+
+```text
+POST /auth/register
+        ↓
+AuthController
+        ↓
+AuthService
+        ↓
+BCrypt PasswordEncoder
+        ↓
+Password Hash
+        ↓
+UserRepository
+        ↓
+MySQL
+```
+
+The original password is never stored directly. It is converted into a BCrypt hash before being saved.
+
+The registration endpoint returns only the user's ID and username rather than exposing the stored password hash.
+
+### User Login
+
+```text
+POST /auth/login
+        ↓
+AuthenticationManager
+        ↓
+DaoAuthenticationProvider
+        ↓
+CustomUserDetailsService
+        ↓
+UserRepository
+        ↓
+MySQL
+        ↓
+BCrypt Password Verification
+        ↓
+Authentication
+        ↓
+JWT Generation
+        ↓
+AuthResponse
+```
+
+The login response contains:
+
+```json
+{
+  "token": "JWT_TOKEN",
+  "username": "username",
+  "role": "USER"
+}
+```
+
+### Protected Request
+
+The client sends the JWT using:
+
+```text
+Authorization: Bearer <JWT>
+```
+
+The `JwtFilter` extracts and validates the token before the request reaches protected controllers.
 
 ## 🔌 API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/applications` | Get all applications with optional filtering |
-| GET | `/applications/{id}` | Get an application by ID |
-| POST | `/applications` | Create a new application |
-| PUT | `/applications/{id}` | Update an application by ID |
-| DELETE | `/applications/{id}` | Delete an application by ID |
-| GET | `/applications/page` | Get applications with pagination |
+### Authentication
 
-### Filtering
+| Method | Endpoint         | Description                        |
+| ------ | ---------------- | ---------------------------------- |
+| POST   | `/auth/register` | Register a new user                |
+| POST   | `/auth/login`    | Authenticate user and generate JWT |
+
+### Job Applications
+
+| Method | Endpoint             | Description                                  |
+| ------ | -------------------- | -------------------------------------------- |
+| GET    | `/applications`      | Get all applications with optional filtering |
+| GET    | `/applications/{id}` | Get an application by ID                     |
+| POST   | `/applications`      | Create a new application                     |
+| PUT    | `/applications/{id}` | Update an application by ID                  |
+| DELETE | `/applications/{id}` | Delete an application by ID                  |
+| GET    | `/applications/page` | Get applications with pagination             |
+
+> **Note:** Job application endpoints require a valid JWT.
+
+## 🔎 Filtering
 
 The application supports filtering job applications by:
 
-- Company
-- Status
-- Location
-- Company + Status + Location
+* Company
+* Status
+* Location
+* Multiple filtering criteria together
 
 Pagination can also be used when retrieving application records.
 
@@ -111,7 +278,14 @@ http://localhost:8080/v3/api-docs
 
 The application uses **MySQL** for persistent storage and **Spring Data JPA** for database interaction.
 
-Application data is stored and managed through the JPA repository layer.
+The project contains separate data models for:
+
+* Users
+* Job applications
+
+Passwords are stored as BCrypt hashes rather than plain text.
+
+Application data is accessed through the repository layer.
 
 ## ▶️ How to Run
 
@@ -119,9 +293,9 @@ Application data is stored and managed through the JPA repository layer.
 
 Make sure you have the following installed:
 
-- Java
-- Maven
-- MySQL
+* Java 21
+* Maven
+* MySQL
 
 ### 1. Clone the repository
 
@@ -135,13 +309,29 @@ Create a database for the application in MySQL.
 
 ### 3. Configure the application
 
-Update the database configuration in:
+Update:
 
 ```text
 src/main/resources/application.properties
 ```
 
-Add your MySQL username, password, and database configuration.
+The application expects the following environment variables:
+
+```text
+DB_USERNAME
+DB_PASSWORD
+JWT_SECRET
+```
+
+Example:
+
+```text
+DB_USERNAME=your_database_username
+DB_PASSWORD=your_database_password
+JWT_SECRET=your_long_secure_secret
+```
+
+> **Important:** Do not commit actual database credentials or JWT secrets to GitHub.
 
 ### 4. Run the application
 
@@ -165,20 +355,36 @@ http://localhost:8080
 
 ## 🧠 What I Learned
 
-This project helped me move beyond basic CRUD development and understand how a real backend application can be structured.
+This project helped me move beyond basic CRUD development and understand how a real backend application can be structured and secured.
 
 Through this project, I worked with:
 
-- REST API design
-- Layered architecture
-- DTOs and data validation
-- Spring Data JPA
-- MySQL database integration
-- Filtering and pagination
-- Global exception handling
-- Consistent API responses
-- Swagger / OpenAPI documentation
-- Git and GitHub workflow
+* Java and Spring Boot
+* REST API design
+* Layered architecture
+* Controller-Service-Repository pattern
+* DTOs and data validation
+* Spring Data JPA
+* MySQL database integration
+* CRUD operations
+* Filtering and pagination
+* Global exception handling
+* Consistent API responses
+* Swagger / OpenAPI documentation
+* Spring Security
+* Authentication and authorization
+* BCrypt password hashing
+* `UserDetailsService`
+* `DaoAuthenticationProvider`
+* `AuthenticationManager`
+* JWT generation and validation
+* JWT expiration
+* JWT filters
+* Security context
+* Role-based authorization
+* Stateless authentication
+* Environment-based secret configuration
+* Git and GitHub workflow
 
 ## 🚀 Future Improvements
 
@@ -186,11 +392,15 @@ This project is part of my ongoing learning journey.
 
 Some areas I plan to explore next include:
 
-- Deploying the application to the cloud
-- Adding authentication and authorization
-- Building a frontend for the API
-- Improving the application's architecture and features
-- Exploring additional backend and deployment technologies
+* OAuth2 authentication with Google
+* OAuth2 authentication with GitHub
+* Improving role-based authorization
+* Adding a frontend for the API
+* Deploying the application to the cloud
+* Improving test coverage
+* Adding additional backend features
+* Exploring additional backend and deployment technologies
+
 
 ## Screenshots
 
